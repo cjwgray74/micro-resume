@@ -1,0 +1,15 @@
+# Node modules
+resume-frontend/node_modules/
+
+# Build output
+resume-frontend/build/
+
+# Go binaries
+**/*.exe
+**/*.out
+
+# Logs
+*.log
+
+# Environment files
+*.env
