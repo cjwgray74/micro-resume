@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8" />
+    <title>Resume</title>
+
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 40px;
+            color: #333;
+        }
+
+        h1 {
+            font-size: 28px;
+            margin-bottom: 5px;
+        }
+
+        h2 {
+            font-size: 20px;
+            margin-top: 30px;
+            border-bottom: 1px solid #ccc;
+            padding-bottom: 5px;
+        }
+
+        h3 {
+            margin: 0;
+            font-size: 16px;
+        }
+
+        .section {
+            margin-bottom: 20px;
+        }
+
+        .experience-item {
+            margin-bottom: 15px;
+        }
+
+        .company {
+            font-weight: bold;
+        }
+
+        .dates {
+            font-style: italic;
+            color: #555;
+        }
+
+        ul {
+            margin-top: 5px;
+        }
+    </style>
+</head>
+
+<body>
+
+    <h1>{{.Name}}</h1>
+    <p><strong>Email:</strong> {{.Email}}</p>
+    <p><strong>Phone:</strong> {{.Phone}}</p>
+
+    <div class="section">
+        <h2>Summary</h2>
+        <p>{{.Summary}}</p>
+    </div>
+
+    <div class="section">
+        <h2>Experience</h2>
+
+        {{range .Experience}}
+        <div class="experience-item">
+            <h3>{{.Title}}</h3>
+            <p class="company">{{.Company}}</p>
+            <p class="dates">{{.Dates}}</p>
+            <p>{{.Description}}</p>
+        </div>
+        {{end}}
+    </div>
+
+    <div class="section">
+        <h2>Education</h2>
+        <p>{{.Education}}</p>
+    </div>
+
+    <div class="section">
+        <h2>Skills</h2>
+        <ul>
+            {{range .Skills}}
+            <li>{{.}}</li>
+            {{end}}
+        </ul>
+    </div>
+
+</body>
+</html>
