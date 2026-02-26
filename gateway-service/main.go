@@ -3,90 +3,70 @@ package main
 import (
 	"io"
 	"net/http"
+	"strings"
 )
+
+func forward(w http.ResponseWriter, r *http.Request, target string) {
+	// CORS
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+	w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
+
+	if r.Method == http.MethodOptions {
+		return
+	}
+
+	req, err := http.NewRequest(r.Method, target, r.Body)
+	if err != nil {
+		http.Error(w, "bad gateway", http.StatusBadGateway)
+		return
+	}
+	req.Header = r.Header
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		http.Error(w, "service unavailable", http.StatusBadGateway)
+		return
+	}
+	defer resp.Body.Close()
+
+	for k, v := range resp.Header {
+		for _, vv := range v {
+			w.Header().Add(k, vv)
+		}
+	}
+	w.WriteHeader(resp.StatusCode)
+	io.Copy(w, resp.Body)
+}
 
 func main() {
 
 	// -------------------------------
-	// ROUTE: /api/resume → resume-service
+	// NEW ROUTES: Multi‑resume API
 	// -------------------------------
-	http.HandleFunc("/api/resume", func(w http.ResponseWriter, r *http.Request) {
-		// CORS for React
-		w.Header().Set("Access-Control-Allow-Origin", "*")
-		w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
-		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
 
-		// Handle preflight request
-		if r.Method == http.MethodOptions {
-			return
-		}
+	// GET /api/resumes
+	// POST /api/resumes
+	http.HandleFunc("/api/resumes", func(w http.ResponseWriter, r *http.Request) {
+		forward(w, r, "http://localhost:8081/resumes")
+	})
 
-		// Forward request to resume-service
-		req, err := http.NewRequest(r.Method, "http://localhost:8081/resume", r.Body)
-		if err != nil {
-			http.Error(w, "bad gateway", http.StatusBadGateway)
-			return
-		}
-		req.Header = r.Header
-
-		resp, err := http.DefaultClient.Do(req)
-		if err != nil {
-			http.Error(w, "resume service unavailable", http.StatusBadGateway)
-			return
-		}
-		defer resp.Body.Close()
-
-		// Copy headers and status code
-		for k, v := range resp.Header {
-			for _, vv := range v {
-				w.Header().Add(k, vv)
-			}
-		}
-		w.WriteHeader(resp.StatusCode)
-
-		// Copy body
-		io.Copy(w, resp.Body)
+	// EVERYTHING under /api/resumes/*
+	// GET /api/resumes/{id}
+	// PUT /api/resumes/{id}
+	// DELETE /api/resumes/{id}
+	// POST /api/resumes/{id}/duplicate
+	http.HandleFunc("/api/resumes/", func(w http.ResponseWriter, r *http.Request) {
+		path := strings.TrimPrefix(r.URL.Path, "/api")
+		target := "http://localhost:8081" + path
+		forward(w, r, target)
 	})
 
 	// -------------------------------
 	// ROUTE: /api/pdf → pdf-service
 	// -------------------------------
 	http.HandleFunc("/api/pdf", func(w http.ResponseWriter, r *http.Request) {
-		// CORS for React
-		w.Header().Set("Access-Control-Allow-Origin", "*")
-		w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
-		w.Header().Set("Access-Control-Allow-Methods", "POST, OPTIONS")
-
-		// Handle preflight request
-		if r.Method == http.MethodOptions {
-			return
-		}
-
-		// Forward request to pdf-service
-		req, err := http.NewRequest(r.Method, "http://localhost:8082/pdf", r.Body)
-		if err != nil {
-			http.Error(w, "bad gateway", http.StatusBadGateway)
-			return
-		}
-		req.Header = r.Header
-
-		resp, err := http.DefaultClient.Do(req)
-		if err != nil {
-			http.Error(w, "pdf service unavailable", http.StatusBadGateway)
-			return
-		}
-		defer resp.Body.Close()
-
-		// Copy headers and status code
-		for k, v := range resp.Header {
-			for _, vv := range v {
-				w.Header().Add(k, vv)
-			}
-		}
-		w.WriteHeader(resp.StatusCode)
-
-		// Copy body (PDF bytes)
-		io.Copy(w, resp.Body)
+		forward(w, r, "http://localhost:8082/pdf")
 	})
 
 	// -------------------------------

@@ -1,96 +1,212 @@
 package main
 
 import (
-	"context"
+	"database/sql"
 	"encoding/json"
 	"log"
 	"net/http"
+	"time"
 
-	"github.com/jackc/pgx/v5"
+	"github.com/gorilla/mux"
+	_ "github.com/lib/pq"
 )
 
-type ExperienceEntry struct {
-	Title       string `json:"title"`
-	Company     string `json:"company"`
-	Dates       string `json:"dates"`
-	Description string `json:"description"`
-}
+var db *sql.DB
 
+// Resume model
 type Resume struct {
-	Name       string            `json:"name"`
-	Email      string            `json:"email"`
-	Phone      string            `json:"phone"`
-	Summary    string            `json:"summary"`
-	Education  string            `json:"education"`
-	Skills     []string          `json:"skills"`
-	Experience []ExperienceEntry `json:"experience"`
+	ID        string          `json:"id"`
+	Title     string          `json:"title"`
+	Data      json.RawMessage `json:"data"`
+	Theme     string          `json:"theme"` // ⭐ FIXED
+	CreatedAt time.Time       `json:"created_at"`
+	UpdatedAt time.Time       `json:"updated_at"`
 }
-
-var db *pgx.Conn
 
 func main() {
 	var err error
 
-	db, err = pgx.Connect(context.Background(),
-		"postgres://postgres:pacman@localhost:5433/resume_db")
+	db, err = sql.Open("postgres",
+		"postgres://postgres:pacman@localhost:5433/resume_db?sslmode=disable")
 	if err != nil {
-		log.Fatal("DB connection failed:", err)
+		log.Fatal("Failed to connect to DB:", err)
 	}
-	defer db.Close(context.Background())
 
-	http.HandleFunc("/resume", handleResume)
+	err = db.Ping()
+	if err != nil {
+		log.Fatal("Database unreachable:", err)
+	}
 
-	log.Println("Resume service running on port 8081...")
-	http.ListenAndServe(":8081", nil)
+	log.Println("Connected to PostgreSQL")
+
+	r := mux.NewRouter()
+
+	// CRUD routes
+	r.HandleFunc("/resumes", listResumes).Methods("GET")
+	r.HandleFunc("/resumes", createResume).Methods("POST")
+	r.HandleFunc("/resumes/{id}", getResume).Methods("GET")
+	r.HandleFunc("/resumes/{id}", updateResume).Methods("PUT")
+	r.HandleFunc("/resumes/{id}", deleteResume).Methods("DELETE")
+	r.HandleFunc("/resumes/{id}/duplicate", duplicateResume).Methods("POST")
+
+	log.Println("Resume service running on :8081")
+	http.ListenAndServe(":8081", r)
 }
 
-func handleResume(w http.ResponseWriter, r *http.Request) {
-	switch r.Method {
-	case "GET":
-		resume, err := loadResume()
-		if err != nil {
-			http.Error(w, "Failed to load resume", 500)
+// List all resumes
+func listResumes(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+
+	rows, err := db.Query(`
+		SELECT id, title, data, theme, created_at, updated_at
+		FROM resumes ORDER BY created_at DESC`)
+	if err != nil {
+		http.Error(w, err.Error(), 500)
+		return
+	}
+	defer rows.Close()
+
+	var resumes []Resume
+
+	for rows.Next() {
+		var res Resume
+		if err := rows.Scan(&res.ID, &res.Title, &res.Data, &res.Theme, &res.CreatedAt, &res.UpdatedAt); err != nil {
+			http.Error(w, err.Error(), 500)
 			return
 		}
-		json.NewEncoder(w).Encode(resume)
-
-	case "POST":
-		var resume Resume
-		json.NewDecoder(r.Body).Decode(&resume)
-
-		err := saveResume(resume)
-		if err != nil {
-			http.Error(w, "Failed to save resume", 500)
-			return
-		}
-
-		w.Write([]byte(`{"status":"saved"}`))
+		resumes = append(resumes, res)
 	}
+
+	json.NewEncoder(w).Encode(resumes)
 }
 
-func loadResume() (Resume, error) {
-	var data []byte
-	err := db.QueryRow(context.Background(),
-		"SELECT data FROM resumes WHERE id = 1").Scan(&data)
+// Create a new resume
+func createResume(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+
+	var input struct {
+		Title string          `json:"title"`
+		Data  json.RawMessage `json:"data"`
+		Theme string          `json:"theme"`
+	}
+
+	json.NewDecoder(r.Body).Decode(&input)
+
+	if input.Theme == "" {
+		input.Theme = "modern"
+	}
+
+	var id string
+	err := db.QueryRow(
+		`INSERT INTO resumes (title, data, theme)
+		 VALUES ($1, $2, $3) RETURNING id`,
+		input.Title, input.Data, input.Theme,
+	).Scan(&id)
 
 	if err != nil {
-		return Resume{}, nil
+		http.Error(w, err.Error(), 500)
+		return
 	}
 
-	var resume Resume
-	json.Unmarshal(data, &resume)
-	return resume, nil
+	json.NewEncoder(w).Encode(map[string]string{"id": id})
 }
 
-func saveResume(resume Resume) error {
-	data, _ := json.Marshal(resume)
+// Get a resume by ID
+func getResume(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
 
-	_, err := db.Exec(context.Background(),
-		`INSERT INTO resumes (id, data)
-         VALUES (1, $1)
-         ON CONFLICT (id)
-         DO UPDATE SET data = EXCLUDED.data`,
-		data)
+	id := mux.Vars(r)["id"]
 
-	return err
+	var res Resume
+	err := db.QueryRow(
+		`SELECT id, title, data, theme, created_at, updated_at
+		 FROM resumes WHERE id = $1`,
+		id,
+	).Scan(&res.ID, &res.Title, &res.Data, &res.Theme, &res.CreatedAt, &res.UpdatedAt)
+
+	if err != nil {
+		http.Error(w, "resume not found", 404)
+		return
+	}
+
+	json.NewEncoder(w).Encode(res)
+}
+
+// Update a resume
+func updateResume(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+
+	id := mux.Vars(r)["id"]
+
+	var input struct {
+		Title string          `json:"title"`
+		Data  json.RawMessage `json:"data"`
+		Theme string          `json:"theme"`
+	}
+
+	json.NewDecoder(r.Body).Decode(&input)
+
+	_, err := db.Exec(
+		`UPDATE resumes
+		 SET title=$1, data=$2, theme=$3, updated_at=NOW()
+		 WHERE id=$4`,
+		input.Title, input.Data, input.Theme, id,
+	)
+
+	if err != nil {
+		http.Error(w, err.Error(), 500)
+		return
+	}
+
+	w.WriteHeader(200)
+}
+
+// Delete a resume
+func deleteResume(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+
+	id := mux.Vars(r)["id"]
+
+	_, err := db.Exec(`DELETE FROM resumes WHERE id=$1`, id)
+	if err != nil {
+		http.Error(w, err.Error(), 500)
+		return
+	}
+
+	w.WriteHeader(200)
+}
+
+// Duplicate a resume
+func duplicateResume(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+
+	id := mux.Vars(r)["id"]
+
+	var title string
+	var data json.RawMessage
+	var theme string
+
+	err := db.QueryRow(
+		`SELECT title, data, theme FROM resumes WHERE id=$1`,
+		id,
+	).Scan(&title, &data, &theme)
+
+	if err != nil {
+		http.Error(w, "resume not found", 404)
+		return
+	}
+
+	var newID string
+	err = db.QueryRow(
+		`INSERT INTO resumes (title, data, theme)
+		 VALUES ($1, $2, $3) RETURNING id`,
+		title+" (Copy)", data, theme,
+	).Scan(&newID)
+
+	if err != nil {
+		http.Error(w, err.Error(), 500)
+		return
+	}
+
+	json.NewEncoder(w).Encode(map[string]string{"id": newID})
 }

@@ -46,16 +46,27 @@ func generatePDF(html string) ([]byte, error) {
 
 func pdfHandler(w http.ResponseWriter, r *http.Request) {
 	var resume Resume
-	json.NewDecoder(r.Body).Decode(&resume)
 
-	tmpl, _ := template.ParseFiles("templates/resume.html")
+	if err := json.NewDecoder(r.Body).Decode(&resume); err != nil {
+		http.Error(w, "Invalid JSON", http.StatusBadRequest)
+		return
+	}
+
+	tmpl, err := template.ParseFiles("templates/resume.html")
+	if err != nil {
+		http.Error(w, "Template not found", http.StatusInternalServerError)
+		return
+	}
 
 	var htmlOutput bytes.Buffer
-	tmpl.Execute(&htmlOutput, resume)
+	if err := tmpl.Execute(&htmlOutput, resume); err != nil {
+		http.Error(w, "Template execution failed", http.StatusInternalServerError)
+		return
+	}
 
 	pdf, err := generatePDF(htmlOutput.String())
 	if err != nil {
-		http.Error(w, "PDF generation failed", 500)
+		http.Error(w, "PDF generation failed", http.StatusInternalServerError)
 		return
 	}
 
@@ -65,7 +76,8 @@ func pdfHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func main() {
-	http.HandleFunc("/pdf", pdfHandler)
-	log.Println("PDF service running on port 8082...")
-	http.ListenAndServe(":8082", nil)
+	http.HandleFunc("/api/pdf", pdfHandler)
+
+	log.Println("PDF service running on port 8080...")
+	http.ListenAndServe(":8080", nil)
 }
