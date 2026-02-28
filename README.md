@@ -1,30 +1,4 @@
 📄 Resume Builder — Microservices Architecture
-https://img.shields.io/badge/Backend-Go-00ADD8?logo=go&logoColor=white https://img.shields.io/badge/Frontend-React-61DAFB?logo=react&logoColor=black https://img.shields.io/badge/Architecture-Microservices-blue https://img.shields.io/badge/Status-In_Development-yellow https://img.shields.io/badge/License-MIT-green
-A microservices‑based Resume Builder application demonstrating real‑world engineering skills across frontend development, backend services, API gateway routing, and PDF generation. Users can create, edit, duplicate, rename, view, and export resumes as downloadable PDFs.
-
-🏗️ System Architecture
-                   ┌──────────────────────────┐
-                   │        Frontend          │
-                   │          React           │
-                   │   localhost:3000         │
-                   └─────────────┬────────────┘
-                                 │
-                                 ▼
-                   ┌──────────────────────────┐
-                   │       API Gateway        │
-                   │            Go            │
-                   │   localhost:8080         │
-                   └──────┬──────────┬────────┘
-                          │          │
-        ┌─────────────────┘          └──────────────────┐
-        ▼                                                ▼
-┌──────────────────────┐                      ┌────────────────────────┐
-│   Resume Service      │                      │     PDF Service        │
-│          Go           │                      │   Go + Chromedp        │
-│   localhost:8081      │                      │   localhost:8082       │
-└──────────────────────┘                      └────────────────────────┘
-
-
 
 🚀 Features
 Frontend (React)
@@ -58,27 +32,6 @@ PDF Service (Go + Chromedp)
 - Aligning ports between gateway and PDF service
 - Adding Chrome executable path for Chromedp on Windows
 - Improving PDF layout and adding themes
-
-📁 Project Structure
-project-root/
-│
-├── frontend/               # React UI
-│     ├── src/
-│     └── package.json
-│
-├── gateway-service/        # API Gateway
-│     └── main.go
-│
-├── resume-service/         # Resume CRUD microservice
-│     └── main.go
-│
-├── pdf-service/            # PDF generator microservice
-│     ├── main.go
-│     └── templates/
-│           └── resume.html
-│
-└── README.md
-
 
 
 🧰 Tech Stack
@@ -117,7 +70,6 @@ go run main.go
 cd frontend
 npm install
 npm start
-
 
 
 ⚙️ Requirements

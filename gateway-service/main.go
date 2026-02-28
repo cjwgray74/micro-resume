@@ -63,10 +63,11 @@ func main() {
 	})
 
 	// -------------------------------
-	// ROUTE: /api/pdf → pdf-service
+	// FIXED ROUTE: /api/pdf → pdf-service
 	// -------------------------------
 	http.HandleFunc("/api/pdf", func(w http.ResponseWriter, r *http.Request) {
-		forward(w, r, "http://localhost:8082/pdf")
+		// Forward exactly to the PDF service route
+		forward(w, r, "http://localhost:8082/api/pdf")
 	})
 
 	// -------------------------------

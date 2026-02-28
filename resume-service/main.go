@@ -18,7 +18,7 @@ type Resume struct {
 	ID        string          `json:"id"`
 	Title     string          `json:"title"`
 	Data      json.RawMessage `json:"data"`
-	Theme     string          `json:"theme"` // ⭐ FIXED
+	Theme     string          `json:"theme"` // theme now fully supported
 	CreatedAt time.Time       `json:"created_at"`
 	UpdatedAt time.Time       `json:"updated_at"`
 }
@@ -32,8 +32,7 @@ func main() {
 		log.Fatal("Failed to connect to DB:", err)
 	}
 
-	err = db.Ping()
-	if err != nil {
+	if err = db.Ping(); err != nil {
 		log.Fatal("Database unreachable:", err)
 	}
 
@@ -92,8 +91,9 @@ func createResume(w http.ResponseWriter, r *http.Request) {
 
 	json.NewDecoder(r.Body).Decode(&input)
 
+	// Default theme if none provided
 	if input.Theme == "" {
-		input.Theme = "modern"
+		input.Theme = "default"
 	}
 
 	var id string

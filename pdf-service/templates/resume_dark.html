@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8" />
+    <title>Resume</title>
+
+    <style>
+        body {
+            font-family: "Inter", Arial, sans-serif;
+            margin: 40px;
+            background: #121212;
+            color: #e5e5e5;
+            line-height: 1.6;
+        }
+
+        h1 {
+            font-size: 34px;
+            margin-bottom: 6px;
+            font-weight: 700;
+            color: #ffffff;
+        }
+
+        .contact {
+            font-size: 14px;
+            color: #bbbbbb;
+            margin-bottom: 25px;
+        }
+
+        h2 {
+            font-size: 18px;
+            margin-top: 30px;
+            margin-bottom: 12px;
+            border-left: 6px solid #4f8cff;
+            padding-left: 10px;
+            font-weight: 600;
+            text-transform: uppercase;
+            color: #4f8cff;
+        }
+
+        .experience-item {
+            margin-bottom: 18px;
+        }
+
+        .experience-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: #ffffff;
+        }
+
+        .company {
+            font-size: 14px;
+            color: #cccccc;
+        }
+
+        .dates {
+            font-size: 13px;
+            color: #999999;
+            margin-bottom: 6px;
+        }
+
+        .skills-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .skill {
+            background: #1f1f1f;
+            color: #4f8cff;
+            padding: 6px 12px;
+            border-radius: 4px;
+            font-size: 13px;
+            border: 1px solid #333333;
+        }
+    </style>
+</head>
+
+<body>
+
+    <h1>{{.Name}}</h1>
+    <div class="contact">
+        {{.Email}} &nbsp;|&nbsp; {{.Phone}}
+    </div>
+
+    <h2>Summary</h2>
+    <p>{{.Summary}}</p>
+
+    <h2>Experience</h2>
+    {{range .Experience}}
+    <div class="experience-item">
+        <div class="experience-title">{{.Title}}</div>
+        <div class="company">{{.Company}}</div>
+        <div class="dates">{{.Dates}}</div>
+        <p>{{.Description}}</p>
+    </div>
+    {{end}}
+
+    <h2>Education</h2>
+    <p>{{.Education}}</p>
+
+    <h2>Skills</h2>
+    <div class="skills-container">
+        {{range .Skills}}
+        <span class="skill">{{.}}</span>
+        {{end}}
+    </div>
+
+</body>
+</html>

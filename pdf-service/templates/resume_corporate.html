@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8" />
+    <title>Resume</title>
+
+    <style>
+        body {
+            font-family: "Inter", Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            color: #222;
+        }
+
+        .container {
+            display: flex;
+            min-height: 100vh;
+        }
+
+        .sidebar {
+            width: 28%;
+            background: #f4f6fa;
+            padding: 40px 30px;
+            border-right: 2px solid #e0e0e0;
+        }
+
+        .main {
+            width: 72%;
+            padding: 40px;
+        }
+
+        h1 {
+            font-size: 30px;
+            margin-bottom: 6px;
+            font-weight: 700;
+        }
+
+        .sidebar h2 {
+            font-size: 16px;
+            margin-top: 25px;
+            margin-bottom: 10px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: #1a3d7c;
+        }
+
+        .main h2 {
+            font-size: 18px;
+            margin-top: 30px;
+            margin-bottom: 12px;
+            border-bottom: 2px solid #1a3d7c;
+            padding-bottom: 4px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            font-weight: 600;
+            color: #1a3d7c;
+        }
+
+        .skills-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+        }
+
+        .skill {
+            background: #e8eefc;
+            color: #1a3d7c;
+            padding: 5px 10px;
+            border-radius: 4px;
+            font-size: 12px;
+        }
+
+        .experience-item {
+            margin-bottom: 18px;
+        }
+
+        .experience-title {
+            font-size: 16px;
+            font-weight: 600;
+        }
+
+        .company {
+            font-size: 14px;
+            color: #444;
+        }
+
+        .dates {
+            font-size: 13px;
+            color: #777;
+            margin-bottom: 6px;
+        }
+    </style>
+</head>
+
+<body>
+
+<div class="container">
+
+    <div class="sidebar">
+        <h1>{{.Name}}</h1>
+
+        <h2>Contact</h2>
+        <p>{{.Email}}<br>{{.Phone}}</p>
+
+        <h2>Skills</h2>
+        <div class="skills-container">
+            {{range .Skills}}
+            <span class="skill">{{.}}</span>
+            {{end}}
+        </div>
+    </div>
+
+    <div class="main">
+
+        <h2>Summary</h2>
+        <p>{{.Summary}}</p>
+
+        <h2>Experience</h2>
+        {{range .Experience}}
+        <div class="experience-item">
+            <div class="experience-title">{{.Title}}</div>
+            <div class="company">{{.Company}}</div>
+            <div class="dates">{{.Dates}}</div>
+            <p>{{.Description}}</p>
+        </div>
+        {{end}}
+
+        <h2>Education</h2>
+        <p>{{.Education}}</p>
+
+    </div>
+
+</div>
+
+</body>
+</html>
