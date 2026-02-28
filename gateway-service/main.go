@@ -3,6 +3,7 @@ package main
 import (
 	"io"
 	"net/http"
+	"os"
 	"strings"
 )
 
@@ -35,39 +36,39 @@ func forward(w http.ResponseWriter, r *http.Request, target string) {
 			w.Header().Add(k, vv)
 		}
 	}
+
 	w.WriteHeader(resp.StatusCode)
 	io.Copy(w, resp.Body)
 }
 
 func main() {
 
+	// Read service URLs from environment variables
+	resumeServiceURL := os.Getenv("RESUME_SERVICE_URL") // http://resume-service:8081
+	pdfServiceURL := os.Getenv("PDF_SERVICE_URL")       // http://pdf-service:8082
+
 	// -------------------------------
-	// NEW ROUTES: Multi‑resume API
+	// Multi‑resume API
 	// -------------------------------
 
 	// GET /api/resumes
 	// POST /api/resumes
 	http.HandleFunc("/api/resumes", func(w http.ResponseWriter, r *http.Request) {
-		forward(w, r, "http://localhost:8081/resumes")
+		forward(w, r, resumeServiceURL+"/resumes")
 	})
 
 	// EVERYTHING under /api/resumes/*
-	// GET /api/resumes/{id}
-	// PUT /api/resumes/{id}
-	// DELETE /api/resumes/{id}
-	// POST /api/resumes/{id}/duplicate
 	http.HandleFunc("/api/resumes/", func(w http.ResponseWriter, r *http.Request) {
 		path := strings.TrimPrefix(r.URL.Path, "/api")
-		target := "http://localhost:8081" + path
+		target := resumeServiceURL + path
 		forward(w, r, target)
 	})
 
 	// -------------------------------
-	// FIXED ROUTE: /api/pdf → pdf-service
+	// PDF route
 	// -------------------------------
 	http.HandleFunc("/api/pdf", func(w http.ResponseWriter, r *http.Request) {
-		// Forward exactly to the PDF service route
-		forward(w, r, "http://localhost:8082/api/pdf")
+		forward(w, r, pdfServiceURL+"/api/pdf")
 	})
 
 	// -------------------------------

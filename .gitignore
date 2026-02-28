@@ -13,3 +13,5 @@ resume-frontend/build/
 
 # Environment files
 *.env
+
+*.exe

@@ -3,8 +3,10 @@ package main
 import (
 	"database/sql"
 	"encoding/json"
+	"fmt"
 	"log"
 	"net/http"
+	"os"
 	"time"
 
 	"github.com/gorilla/mux"
@@ -18,25 +20,75 @@ type Resume struct {
 	ID        string          `json:"id"`
 	Title     string          `json:"title"`
 	Data      json.RawMessage `json:"data"`
-	Theme     string          `json:"theme"` // theme now fully supported
+	Theme     string          `json:"theme"`
 	CreatedAt time.Time       `json:"created_at"`
 	UpdatedAt time.Time       `json:"updated_at"`
+}
+
+// -------------------------------
+// DATABASE MIGRATIONS
+// -------------------------------
+func runMigrations(db *sql.DB) error {
+	// Enable pgcrypto for UUID generation
+	_, err := db.Exec(`CREATE EXTENSION IF NOT EXISTS pgcrypto;`)
+	if err != nil {
+		return err
+	}
+
+	// Create resumes table
+	_, err = db.Exec(`
+		CREATE TABLE IF NOT EXISTS resumes (
+			id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+			title TEXT NOT NULL,
+			data JSONB NOT NULL,
+			theme TEXT NOT NULL DEFAULT 'default',
+			created_at TIMESTAMP DEFAULT NOW(),
+			updated_at TIMESTAMP DEFAULT NOW()
+		);
+	`)
+	return err
 }
 
 func main() {
 	var err error
 
-	db, err = sql.Open("postgres",
-		"postgres://postgres:pacman@localhost:5433/resume_db?sslmode=disable")
+	// Read DB settings from environment (docker-compose.yml)
+	host := os.Getenv("DB_HOST")
+	user := os.Getenv("DB_USER")
+	password := os.Getenv("DB_PASSWORD")
+	dbname := os.Getenv("DB_NAME")
+
+	// Internal Postgres port is always 5432 inside Docker
+	connStr := fmt.Sprintf(
+		"host=%s port=5432 user=%s password=%s dbname=%s sslmode=disable",
+		host, user, password, dbname,
+	)
+
+	db, err = sql.Open("postgres", connStr)
 	if err != nil {
 		log.Fatal("Failed to connect to DB:", err)
 	}
 
-	if err = db.Ping(); err != nil {
+	// Retry loop so service waits for Postgres
+	for i := 0; i < 10; i++ {
+		err = db.Ping()
+		if err == nil {
+			break
+		}
+		log.Println("Waiting for database...")
+		time.Sleep(2 * time.Second)
+	}
+	if err != nil {
 		log.Fatal("Database unreachable:", err)
 	}
 
 	log.Println("Connected to PostgreSQL")
+
+	// Run migrations
+	if err := runMigrations(db); err != nil {
+		log.Fatal("Migration failed:", err)
+	}
+	log.Println("Database migrations complete")
 
 	r := mux.NewRouter()
 
@@ -91,7 +143,6 @@ func createResume(w http.ResponseWriter, r *http.Request) {
 
 	json.NewDecoder(r.Body).Decode(&input)
 
-	// Default theme if none provided
 	if input.Theme == "" {
 		input.Theme = "default"
 	}

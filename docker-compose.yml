@@ -1,0 +1,67 @@
+version: "3.9"
+
+services:
+  postgres:
+    image: postgres:15
+    container_name: resume_postgres
+    restart: always
+    environment:
+      POSTGRES_USER: resume
+      POSTGRES_PASSWORD: resume123
+      POSTGRES_DB: resumes
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+  resume-service:
+    build: ./resume-service
+    container_name: resume_service
+    restart: always
+    environment:
+      DB_HOST: postgres
+      DB_USER: resume
+      DB_PASSWORD: resume123
+      DB_NAME: resumes
+      PORT: 8081
+    depends_on:
+      - postgres
+    ports:
+      - "8081:8081"
+
+  pdf-service:
+    build: ./pdf-service
+    container_name: pdf_service
+    restart: always
+    environment:
+      PORT: 8082
+    ports:
+      - "8082:8082"
+
+  gateway-service:
+    build: ./gateway-service
+    container_name: gateway_service
+    restart: always
+    environment:
+      RESUME_SERVICE_URL: http://resume-service:8081
+      PDF_SERVICE_URL: http://pdf-service:8082
+      PORT: 8080
+    depends_on:
+      - resume-service
+      - pdf-service
+    ports:
+      - "8080:8080"
+
+  resume-frontend:
+    build: ./resume-frontend
+    container_name: resume_frontend
+    restart: always
+    environment:
+      REACT_APP_GATEWAY_URL: http://localhost:8080
+    ports:
+      - "3000:80"
+    depends_on:
+      - gateway-service
+
+volumes:
+  pgdata:
