@@ -7,6 +7,7 @@ import (
 	"log"
 	"net/http"
 	"net/url"
+	"runtime"
 	"text/template"
 
 	"github.com/chromedp/cdproto/page"
@@ -44,8 +45,15 @@ type Resume struct {
 
 func generatePDF(html string) ([]byte, error) {
 
+	// Detect OS and choose correct Chrome/Chromium path
+	chromePath := "/usr/bin/chromium" // Docker Linux default
+
+	if runtime.GOOS == "windows" {
+		chromePath = `C:\Program Files\Google\Chrome\Application\chrome.exe`
+	}
+
 	allocOpts := append(chromedp.DefaultExecAllocatorOptions[:],
-		chromedp.ExecPath(`C:\Program Files\Google\Chrome\Application\chrome.exe`),
+		chromedp.ExecPath(chromePath),
 		chromedp.NoSandbox,
 	)
 
